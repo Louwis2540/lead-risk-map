@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>สถานประกอบการคัดแยกขยะอิเล็กทรอนิกส์ ต.หนองซอน</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,20 +38,18 @@
         #map-container { position: relative; height: calc(100vh - 65px); width: 100%; border: none; }
         #map { height: 100%; width: 100%; z-index: 1; border: none; }
 
-        /* === กฎ CSS ใหม่เพื่อลบกรอบสี่เหลี่ยมที่ไม่ได้ตั้งใจ === */
-        /* ลบเส้นขอบสี่เหลี่ยมรอบหมุดแผนที่Leaflet และองค์ประกอบเชิงโต้ตอบ */
+        /* ลบกรอบสี่เหลี่ยมรอบหมุดแผนที่และปุ่มซูม */
         .leaflet-marker-pane > *,
-        .leaflet-interactive:focus {
+        .leaflet-interactive:focus,
+        .leaflet-control-zoom a {
             outline: none !important;
             border: none !important;
         }
         
-        /* รักษาเส้นขอบสีขาวเล็กๆ รอบ Pb และเงาให้ดูมีมิติเหมือนเดิม */
         .leaflet-marker-pane .custom-map-marker {
             border: 2px solid #fff !important;
             box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.2) !important;
         }
-        /* ========================================================= */
         
         .filter-panel {
             position: absolute; top: 20px; right: 20px; 
@@ -63,14 +61,27 @@
             border-top: 5px solid #2a5298;
             backdrop-filter: blur(5px);
             box-sizing: border-box;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .filter-header { 
-            display: flex; align-items: center; 
+            display: flex; align-items: center; justify-content: space-between;
             border-bottom: 2px solid #edf2f7; 
             padding-bottom: 12px; margin-bottom: 18px; 
         }
+        .filter-header-title { display: flex; align-items: center; }
         .filter-header i { margin-right: 10px; color: #2a5298; font-size: 20px;}
         .filter-header b { font-size: 18px; color: #2d3748; }
+
+        /* ปุ่มปิดแผงควบคุม (จะแสดงเฉพาะมือถือ) */
+        .close-filter-btn {
+            display: none;
+            background: none; border: none; font-size: 24px; color: #a0aec0; cursor: pointer;
+        }
+
+        /* ปุ่มเปิดแผงควบคุมแบบลอย (จะแสดงเฉพาะมือถือ) */
+        .mobile-toggle-btn {
+            display: none;
+        }
 
         .filter-group { margin-bottom: 18px; }
         .filter-group label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; color: #4a5568;}
@@ -115,7 +126,6 @@
             display: flex; align-items: center; justify-content: center;
             width: 28px; height: 28px;
             border-radius: 50%;
-            /* กฎเหล่านี้ยังคงเดิมตามค่าเริ่มต้น แต่ถูกควบคุมด้วยกฎ CSS ใหม่ด้านบน */
             color: white;
             font-size: 12px;
             font-weight: bold;
@@ -127,6 +137,71 @@
         
         .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .leaflet-popup-content { margin: 15px; }
+
+        /* =========================================
+           RESPONSIVE DESIGN (โหมดโทรศัพท์มือถือแบบ App-like)
+           ========================================= */
+        @media (max-width: 768px) {
+            header { padding: 12px 16px; }
+            h1 { font-size: 15px; line-height: 1.4; }
+            header i { font-size: 20px; }
+            
+            #map-container { 
+                height: calc(100vh - 60px); /* แผนที่เต็มจอด้านล่าง header */
+            }
+            
+            /* ปุ่มเปิดแผงควบคุมแบบลอยตรงกลางล่างจอ */
+            .mobile-toggle-btn {
+                display: block;
+                position: absolute;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 1000; /* อยู่เหนือแผนที่ แต่ใต้ filter-panel */
+                background: #2a5298;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 30px;
+                font-family: 'Sarabun', sans-serif;
+                font-size: 16px;
+                font-weight: 600;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                cursor: pointer;
+            }
+            .mobile-toggle-btn i { margin-right: 8px; }
+
+            /* ปรับปุ่มซูมขวาล่างให้สูงขึ้นนิดนึง เพื่อไม่ให้โดนปุ่มค้นหาบัง */
+            .leaflet-bottom.leaflet-right { bottom: 80px !important; }
+
+            /* แปลงแผงควบคุมให้เป็น Bottom Sheet สไลด์จากด้านล่าง */
+            .filter-panel {
+                top: auto; 
+                bottom: 0; 
+                right: 0;
+                left: 0;
+                width: 100%; 
+                max-height: 75vh; 
+                border-radius: 20px 20px 0 0; 
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+                border-top: none;
+                padding: 24px 20px;
+                /* ซ่อนไว้ด้านล่างจอเป็นค่าเริ่มต้น */
+                transform: translateY(120%); 
+                z-index: 2000;
+            }
+
+            /* คลาสเมื่อกดเปิดแผงควบคุม */
+            .filter-panel.active {
+                transform: translateY(0);
+            }
+
+            .close-filter-btn { display: block; } /* โชว์ปุ่มกากบาทปิด */
+            
+            .filter-header b { font-size: 16px; }
+            .filter-group label { font-size: 13px; }
+            .filter-group select { font-size: 14px; padding: 12px; } /* ปรับกล่องเลือกให้กดง่ายขึ้น */
+        }
     </style>
 </head>
 <body>
@@ -139,9 +214,16 @@
     <div id="map-container">
         <div id="map"></div>
         
+        <button id="mobileFilterToggle" class="mobile-toggle-btn">
+            <i class="fas fa-search"></i> ค้นหา / กรองข้อมูล
+        </button>
+
         <div class="filter-panel" id="filterPanel">
             <div class="filter-header">
-                <i class="fas fa-sliders-h"></i><b>แผงควบคุมข้อมูล</b>
+                <div class="filter-header-title">
+                    <i class="fas fa-sliders-h"></i><b>แผงควบคุมข้อมูล</b>
+                </div>
+                <button id="closeFilterBtn" class="close-filter-btn"><i class="fas fa-times-circle"></i></button>
             </div>
             
             <div class="radius-legend">
@@ -180,6 +262,27 @@
             attribution: 'Tiles &copy; Esri',
             maxZoom: 18
         }).addTo(map);
+
+        // --- ระบบเปิด/ปิด แผงควบคุมบนมือถือ ---
+        const filterPanel = document.getElementById('filterPanel');
+        const mobileFilterToggle = document.getElementById('mobileFilterToggle');
+        const closeFilterBtn = document.getElementById('closeFilterBtn');
+
+        mobileFilterToggle.addEventListener('click', () => {
+            filterPanel.classList.add('active');
+        });
+
+        closeFilterBtn.addEventListener('click', () => {
+            filterPanel.classList.remove('active');
+        });
+
+        // ฟังก์ชันซ่อนแผงควบคุมอัตโนมัติบนมือถือ เมื่อผู้ใช้เลือกข้อมูลเสร็จแล้ว (ให้เห็นแผนที่ชัดๆ)
+        function autoClosePanelOnMobile() {
+            if (window.innerWidth <= 768) {
+                filterPanel.classList.remove('active');
+            }
+        }
+        // ------------------------------------
 
         var allData = [];
         var mapLayers = [];
@@ -337,6 +440,7 @@
                 marker.on('click', function(e) {
                     var targetLatLng = e.target.getLatLng();
                     map.flyTo(targetLatLng, 18, { animate: true, duration: 1.2 });
+                    autoClosePanelOnMobile(); // ถ้าเปิดเมนูค้างไว้ แล้วมากดหมุด ให้พับเมนูเก็บ
                 });
 
                 mapLayers.push(circle);
@@ -389,6 +493,9 @@
             }
 
             renderMap(filteredData);
+            
+            // กรณีถ้าเลือกหมู่บ้านแล้วไม่ได้เลือกร้านย่อย จะให้พับเก็บเลยไหม? 
+            // เอาไว้ก่อน ให้ผู้ใช้เลือกร้านย่อยต่อสะดวกกว่า
         });
 
         document.getElementById('shopSelect').addEventListener('change', function(e) {
@@ -407,6 +514,9 @@
                     let name = getColData(row, ['Name', 'ชื่อร้าน', 'name']) || 'ไม่ระบุชื่อร้าน';
                     return name === selectedShop;
                 });
+                
+                // ถ้าระบุชื่อร้านเฉพาะเจาะจงแล้ว ให้พับแผงควบคุมเก็บอัตโนมัติ เพื่อดูแผนที่ที่ถูกซูม
+                autoClosePanelOnMobile();
             }
 
             renderMap(filteredData);
