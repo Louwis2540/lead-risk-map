@@ -41,7 +41,8 @@
         /* ลบกรอบสี่เหลี่ยมรอบหมุดแผนที่และปุ่มซูม */
         .leaflet-marker-pane > *,
         .leaflet-interactive:focus,
-        .leaflet-control-zoom a {
+        .leaflet-control-zoom a,
+        .leaflet-control-layers-toggle {
             outline: none !important;
             border: none !important;
         }
@@ -49,6 +50,14 @@
         .leaflet-marker-pane .custom-map-marker {
             border: 2px solid #fff !important;
             box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.2) !important;
+        }
+        
+        /* ตกแต่งกล่องเลือกเลเยอร์แผนที่มุมซ้ายบน */
+        .leaflet-control-layers {
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-family: 'Sarabun', sans-serif;
+            font-size: 14px;
         }
         
         .filter-panel {
@@ -72,16 +81,8 @@
         .filter-header i { margin-right: 10px; color: #2a5298; font-size: 20px;}
         .filter-header b { font-size: 18px; color: #2d3748; }
 
-        /* ปุ่มปิดแผงควบคุม (จะแสดงเฉพาะมือถือ) */
-        .close-filter-btn {
-            display: none;
-            background: none; border: none; font-size: 24px; color: #a0aec0; cursor: pointer;
-        }
-
-        /* ปุ่มเปิดแผงควบคุมแบบลอย (จะแสดงเฉพาะมือถือ) */
-        .mobile-toggle-btn {
-            display: none;
-        }
+        .close-filter-btn { display: none; background: none; border: none; font-size: 24px; color: #a0aec0; cursor: pointer; }
+        .mobile-toggle-btn { display: none; }
 
         .filter-group { margin-bottom: 18px; }
         .filter-group label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; color: #4a5568;}
@@ -138,69 +139,33 @@
         .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .leaflet-popup-content { margin: 15px; }
 
-        /* =========================================
-           RESPONSIVE DESIGN (โหมดโทรศัพท์มือถือแบบ App-like)
-           ========================================= */
         @media (max-width: 768px) {
             header { padding: 12px 16px; }
             h1 { font-size: 15px; line-height: 1.4; }
             header i { font-size: 20px; }
+            #map-container { height: calc(100vh - 60px); }
             
-            #map-container { 
-                height: calc(100vh - 60px); /* แผนที่เต็มจอด้านล่าง header */
-            }
-            
-            /* ปุ่มเปิดแผงควบคุมแบบลอยตรงกลางล่างจอ */
             .mobile-toggle-btn {
-                display: block;
-                position: absolute;
-                bottom: 30px;
-                left: 50%;
-                transform: translateX(-50%);
-                z-index: 1000; /* อยู่เหนือแผนที่ แต่ใต้ filter-panel */
-                background: #2a5298;
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                border-radius: 30px;
-                font-family: 'Sarabun', sans-serif;
-                font-size: 16px;
-                font-weight: 600;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                cursor: pointer;
+                display: block; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+                z-index: 1000; background: #2a5298; color: white; border: none; padding: 12px 24px;
+                border-radius: 30px; font-family: 'Sarabun', sans-serif; font-size: 16px; font-weight: 600;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer;
             }
             .mobile-toggle-btn i { margin-right: 8px; }
 
-            /* ปรับปุ่มซูมขวาล่างให้สูงขึ้นนิดนึง เพื่อไม่ให้โดนปุ่มค้นหาบัง */
             .leaflet-bottom.leaflet-right { bottom: 80px !important; }
 
-            /* แปลงแผงควบคุมให้เป็น Bottom Sheet สไลด์จากด้านล่าง */
             .filter-panel {
-                top: auto; 
-                bottom: 0; 
-                right: 0;
-                left: 0;
-                width: 100%; 
-                max-height: 75vh; 
-                border-radius: 20px 20px 0 0; 
-                box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
-                border-top: none;
-                padding: 24px 20px;
-                /* ซ่อนไว้ด้านล่างจอเป็นค่าเริ่มต้น */
-                transform: translateY(120%); 
-                z-index: 2000;
+                top: auto; bottom: 0; right: 0; left: 0; width: 100%; max-height: 75vh; 
+                border-radius: 20px 20px 0 0; box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+                border-top: none; padding: 24px 20px; transform: translateY(120%); z-index: 2000;
             }
-
-            /* คลาสเมื่อกดเปิดแผงควบคุม */
-            .filter-panel.active {
-                transform: translateY(0);
-            }
-
-            .close-filter-btn { display: block; } /* โชว์ปุ่มกากบาทปิด */
+            .filter-panel.active { transform: translateY(0); }
+            .close-filter-btn { display: block; }
             
             .filter-header b { font-size: 16px; }
             .filter-group label { font-size: 13px; }
-            .filter-group select { font-size: 14px; padding: 12px; } /* ปรับกล่องเลือกให้กดง่ายขึ้น */
+            .filter-group select { font-size: 14px; padding: 12px; }
         }
     </style>
 </head>
@@ -258,31 +223,40 @@
         var map = L.map('map', { zoomControl: false }).setView([16.42, 103.18], 13);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri',
-            maxZoom: 18
-        }).addTo(map);
+        // --- เพิ่ม Layer แผนที่หลายรูปแบบ (อัปเดตล่าสุด) ---
+        var googleSatHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            attribution: '© Google'
+        });
 
-        // --- ระบบเปิด/ปิด แผงควบคุมบนมือถือ ---
+        var googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            attribution: '© Google'
+        });
+
+        // กำหนดให้ Google Satellite (แบบมีชื่อถนน) เป็นแผนที่เริ่มต้น
+        googleSatHybrid.addTo(map);
+
+        // ตัวเลือกสลับแผนที่มุมซ้ายบน
+        var baseMaps = {
+            "ภาพดาวเทียม (Google)": googleSatHybrid,
+            "แผนที่ถนน (Google)": googleStreets
+        };
+        L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
+        // -------------------------------------------------
+
         const filterPanel = document.getElementById('filterPanel');
         const mobileFilterToggle = document.getElementById('mobileFilterToggle');
         const closeFilterBtn = document.getElementById('closeFilterBtn');
 
-        mobileFilterToggle.addEventListener('click', () => {
-            filterPanel.classList.add('active');
-        });
+        mobileFilterToggle.addEventListener('click', () => { filterPanel.classList.add('active'); });
+        closeFilterBtn.addEventListener('click', () => { filterPanel.classList.remove('active'); });
 
-        closeFilterBtn.addEventListener('click', () => {
-            filterPanel.classList.remove('active');
-        });
-
-        // ฟังก์ชันซ่อนแผงควบคุมอัตโนมัติบนมือถือ เมื่อผู้ใช้เลือกข้อมูลเสร็จแล้ว (ให้เห็นแผนที่ชัดๆ)
         function autoClosePanelOnMobile() {
             if (window.innerWidth <= 768) {
                 filterPanel.classList.remove('active');
             }
         }
-        // ------------------------------------
 
         var allData = [];
         var mapLayers = [];
@@ -440,7 +414,7 @@
                 marker.on('click', function(e) {
                     var targetLatLng = e.target.getLatLng();
                     map.flyTo(targetLatLng, 18, { animate: true, duration: 1.2 });
-                    autoClosePanelOnMobile(); // ถ้าเปิดเมนูค้างไว้ แล้วมากดหมุด ให้พับเมนูเก็บ
+                    autoClosePanelOnMobile();
                 });
 
                 mapLayers.push(circle);
@@ -493,9 +467,6 @@
             }
 
             renderMap(filteredData);
-            
-            // กรณีถ้าเลือกหมู่บ้านแล้วไม่ได้เลือกร้านย่อย จะให้พับเก็บเลยไหม? 
-            // เอาไว้ก่อน ให้ผู้ใช้เลือกร้านย่อยต่อสะดวกกว่า
         });
 
         document.getElementById('shopSelect').addEventListener('change', function(e) {
@@ -514,8 +485,6 @@
                     let name = getColData(row, ['Name', 'ชื่อร้าน', 'name']) || 'ไม่ระบุชื่อร้าน';
                     return name === selectedShop;
                 });
-                
-                // ถ้าระบุชื่อร้านเฉพาะเจาะจงแล้ว ให้พับแผงควบคุมเก็บอัตโนมัติ เพื่อดูแผนที่ที่ถูกซูม
                 autoClosePanelOnMobile();
             }
 
