@@ -19,9 +19,9 @@
             padding: 0; 
             background-color: #f0f2f5; 
             color: #333;
+            overflow: hidden; 
         }
         
-        /* สไตล์ Header แบบ Modern Gradient */
         header { 
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: white; 
@@ -35,10 +35,24 @@
         header i { margin-right: 12px; font-size: 24px; color: #4facfe; }
         h1 { margin: 0; font-size: 22px; font-weight: 500; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
         
-        #map-container { position: relative; height: calc(100vh - 65px); width: 100%; }
-        #map { height: 100%; width: 100%; z-index: 1; }
+        #map-container { position: relative; height: calc(100vh - 65px); width: 100%; border: none; }
+        #map { height: 100%; width: 100%; z-index: 1; border: none; }
+
+        /* === กฎ CSS ใหม่เพื่อลบกรอบสี่เหลี่ยมที่ไม่ได้ตั้งใจ === */
+        /* ลบเส้นขอบสี่เหลี่ยมรอบหมุดแผนที่Leaflet และองค์ประกอบเชิงโต้ตอบ */
+        .leaflet-marker-pane > *,
+        .leaflet-interactive:focus {
+            outline: none !important;
+            border: none !important;
+        }
         
-        /* สไตล์กล่อง Filter Panel ที่สวยงามขึ้น */
+        /* รักษาเส้นขอบสีขาวเล็กๆ รอบ Pb และเงาให้ดูมีมิติเหมือนเดิม */
+        .leaflet-marker-pane .custom-map-marker {
+            border: 2px solid #fff !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.2) !important;
+        }
+        /* ========================================================= */
+        
         .filter-panel {
             position: absolute; top: 20px; right: 20px; 
             background: rgba(255, 255, 255, 0.98);
@@ -48,6 +62,7 @@
             z-index: 1000; width: 300px; max-height: 80vh; overflow-y: auto; 
             border-top: 5px solid #2a5298;
             backdrop-filter: blur(5px);
+            box-sizing: border-box;
         }
         .filter-header { 
             display: flex; align-items: center; 
@@ -67,6 +82,7 @@
             font-size: 14px;
             background-color: #f7fafc;
             color: #2d3748;
+            box-sizing: border-box;
         }
         .filter-group select:focus { border-color: #4facfe; box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.2); background-color: #fff;}
         
@@ -94,23 +110,21 @@
         .risk-icon-orange { color: #dd6b20; }
         .risk-icon-red { color: #e53e3e; }
 
-        /* --- สไตล์หมุดตะกั่ว (Pb) แบบมีมิติ --- */
         .clear-default-icon { background: none; border: none; }
         .custom-map-marker {
             display: flex; align-items: center; justify-content: center;
             width: 28px; height: 28px;
             border-radius: 50%;
-            border: 2px solid #fff;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.2);
+            /* กฎเหล่านี้ยังคงเดิมตามค่าเริ่มต้น แต่ถูกควบคุมด้วยกฎ CSS ใหม่ด้านบน */
             color: white;
             font-size: 12px;
             font-weight: bold;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
             transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
         }
         .custom-map-marker:hover { transform: scale(1.2); z-index: 1000 !important; }
         
-        /* ตกแต่ง Popup ของ Leaflet ใหม่ */
         .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .leaflet-popup-content { margin: 15px; }
     </style>
@@ -160,7 +174,7 @@
     
     <script>
         var map = L.map('map', { zoomControl: false }).setView([16.42, 103.18], 13);
-        L.control.zoom({ position: 'topleft' }).addTo(map);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
 
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri',
@@ -170,7 +184,7 @@
         var allData = [];
         var mapLayers = [];
         var villageColors = {};
-        var colorPalette = ['#e53e3e', '#38a169', '#dd6b20', '#805ad5', '#3182ce', '#d53f8c', '#d69e2e', '#e53e3e', '#00b5d8', '#718096'];
+        var colorPalette = ['#e53e3e', '#38a169', '#dd6b20', '#805ad5', '#3182ce', '#d53f8c', '#d69e2e', '#00b5d8', '#718096'];
 
         function createVillageIcon(color) {
             return L.divIcon({
@@ -182,12 +196,20 @@
             });
         }
 
-        function getColData(row, keyword) {
-            let key = Object.keys(row).find(k => k && k.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().includes(keyword.toLowerCase()));
-            return key ? row[key] : null;
+        function getColData(row, possibleKeys) {
+            let rowKeys = Object.keys(row);
+            for (let pk of possibleKeys) {
+                let exact = rowKeys.find(k => k && k.trim().toLowerCase() === pk.toLowerCase());
+                if (exact !== undefined && row[exact] !== null && row[exact] !== '') return row[exact];
+            }
+            for (let pk of possibleKeys) {
+                let partial = rowKeys.find(k => k && k.trim().toLowerCase().includes(pk.toLowerCase()));
+                if (partial !== undefined && row[partial] !== null && row[partial] !== '') return row[partial];
+            }
+            return null;
         }
 
-        var csvUrl = 'https://docs.google.com/spreadsheets/d/1nE6YnjG9gXg_1F-TMZY3mQAmiUAJXk44_sqaIIgoYP0/gviz/tq?tqx=out:csv&gid=1304375883';
+        var csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTQfZu_hz_OBUlxybl638n9KuY7qA3Pq17_B72waIU84f2HJaEDRPOp-Qou9nT9bb_dFrydPF6T7OA4/pub?output=csv';
 
         Papa.parse(csvUrl, {
             download: true,
@@ -196,7 +218,7 @@
             complete: function(results) {
                 if(results.data && results.data.length > 0) {
                     allData = results.data.filter(row => {
-                        let lat = getColData(row, 'lat');
+                        let lat = getColData(row, ['Latitude', 'lat']);
                         return lat && (typeof lat === 'number' || !isNaN(parseFloat(lat)));
                     });
                     
@@ -212,7 +234,7 @@
             let colorIndex = 0;
 
             allData.forEach(row => {
-                let v = getColData(row, 'village');
+                let v = getColData(row, ['Village', 'หมู่บ้าน', 'village']);
                 v = v ? String(v).trim() : 'ไม่ระบุหมู่';
                 villages.add(v);
                 if (!villageColors[v]) {
@@ -239,13 +261,13 @@
             let filteredShops = allData;
             if (selectedVillage !== 'all') {
                 filteredShops = allData.filter(row => {
-                    let v = getColData(row, 'village');
+                    let v = getColData(row, ['Village', 'หมู่บ้าน', 'village']);
                     return (v ? String(v).trim() : 'ไม่ระบุหมู่') === selectedVillage;
                 });
             }
 
             filteredShops.forEach(row => {
-                let shopName = getColData(row, 'name') || 'ไม่ระบุชื่อร้าน';
+                let shopName = getColData(row, ['Name', 'ชื่อร้าน', 'name']) || 'ไม่ระบุชื่อร้าน';
                 let option = document.createElement('option');
                 option.value = shopName;
                 option.text = shopName;
@@ -256,17 +278,37 @@
         function renderMap(dataToRender) {
             mapLayers.forEach(layer => map.removeLayer(layer));
             mapLayers = [];
+            
+            let coordsMap = {};
 
             dataToRender.forEach(row => {
-                let lat = parseFloat(getColData(row, 'lat'));
-                let lng = parseFloat(getColData(row, 'long'));
-                let name = getColData(row, 'name') || 'ไม่ระบุชื่อร้าน';
-                let address = getColData(row, 'address') || 'ไม่ระบุที่อยู่';
-                let workers = getColData(row, 'workers') || 0;
-                let v_raw = getColData(row, 'village');
+                let latRaw = parseFloat(getColData(row, ['Latitude', 'lat']));
+                let lngRaw = parseFloat(getColData(row, ['Longitude', 'long', 'lon']));
+                
+                let name = getColData(row, ['Name', 'ชื่อร้าน', 'name']) || 'ไม่ระบุชื่อร้าน';
+                let address = getColData(row, ['Address', 'ที่อยู่', 'address']) || 'ไม่ระบุที่อยู่';
+                let workers = getColData(row, ['Workers', 'คนงาน', 'worker']) || 0;
+                let v_raw = getColData(row, ['Village', 'หมู่บ้าน', 'village']);
                 let village = v_raw ? String(v_raw).trim() : 'ไม่ระบุหมู่';
                 
-                if(isNaN(lat) || isNaN(lng)) return;
+                if(isNaN(latRaw) || isNaN(lngRaw)) return;
+
+                let coordKey = latRaw.toFixed(5) + "_" + lngRaw.toFixed(5);
+                let offsetLat = 0;
+                let offsetLng = 0;
+                
+                if (coordsMap[coordKey]) {
+                    let count = coordsMap[coordKey];
+                    let angle = count * (Math.PI / 4); 
+                    offsetLat = Math.sin(angle) * 0.00015; 
+                    offsetLng = Math.cos(angle) * 0.00015;
+                    coordsMap[coordKey]++;
+                } else {
+                    coordsMap[coordKey] = 1;
+                }
+
+                let lat = latRaw + offsetLat;
+                let lng = lngRaw + offsetLng;
 
                 let vColor = villageColors[village] || '#3182ce';
 
@@ -292,13 +334,27 @@
                 `;
                 marker.bindPopup(popupContent);
 
+                marker.on('click', function(e) {
+                    var targetLatLng = e.target.getLatLng();
+                    map.flyTo(targetLatLng, 18, { animate: true, duration: 1.2 });
+                });
+
                 mapLayers.push(circle);
                 mapLayers.push(marker);
             });
 
             if (dataToRender.length > 0 && mapLayers.length > 0) {
-                let group = new L.featureGroup(mapLayers);
-                map.fitBounds(group.getBounds().pad(0.1));
+                if (dataToRender.length === 1) {
+                    let firstMarker = mapLayers.find(layer => layer instanceof L.Marker);
+                    if (firstMarker) {
+                        let targetLatLng = firstMarker.getLatLng();
+                        map.flyTo(targetLatLng, 18, { animate: true, duration: 1.2 });
+                        firstMarker.openPopup();
+                    }
+                } else {
+                    let group = new L.featureGroup(mapLayers);
+                    map.fitBounds(group.getBounds().pad(0.1));
+                }
             }
         }
 
@@ -312,15 +368,15 @@
 
             if (selectedVillage !== 'all') {
                 filteredData = allData.filter(row => {
-                    let v = getColData(row, 'village');
+                    let v = getColData(row, ['Village', 'หมู่บ้าน', 'village']);
                     return (v ? String(v).trim() : 'ไม่ระบุหมู่') === selectedVillage;
                 });
                 
                 let sumKids = 0, sumPregnant = 0, sumElders = 0;
                 filteredData.forEach(row => {
-                    sumKids += parseInt(getColData(row, 'kids')) || 0;
-                    sumPregnant += parseInt(getColData(row, 'pregnant')) || 0;
-                    sumElders += parseInt(getColData(row, 'elders')) || 0;
+                    sumKids += parseInt(getColData(row, ['Kids', 'เด็ก', 'kid'])) || 0;
+                    sumPregnant += parseInt(getColData(row, ['Pregnant', 'ครรภ์', 'pregnant'])) || 0;
+                    sumElders += parseInt(getColData(row, ['Elders', 'สูงอายุ', 'elder'])) || 0;
                 });
 
                 document.getElementById('summaryTitle').innerHTML = '<i class="fas fa-chart-pie"></i> ข้อมูลกลุ่มเสี่ยง: ' + selectedVillage;
@@ -342,13 +398,13 @@
 
             if (selectedVillage !== 'all') {
                 filteredData = filteredData.filter(row => {
-                    let v = getColData(row, 'village');
+                    let v = getColData(row, ['Village', 'หมู่บ้าน', 'village']);
                     return (v ? String(v).trim() : 'ไม่ระบุหมู่') === selectedVillage;
                 });
             }
             if (selectedShop !== 'all') {
                 filteredData = filteredData.filter(row => {
-                    let name = getColData(row, 'name') || 'ไม่ระบุชื่อร้าน';
+                    let name = getColData(row, ['Name', 'ชื่อร้าน', 'name']) || 'ไม่ระบุชื่อร้าน';
                     return name === selectedShop;
                 });
             }
